@@ -1,0 +1,147 @@
+************************************************************************
+* Project   : Employee & Student Data Management
+* Developer : Aniket Shegamwar
+* Purpose   : ABAP Module Pool Program to manage Employee & Student data
+************************************************************************
+
+" Table Controls
+CONTROLS: tbc  TYPE TABLEVIEW USING SCREEN 2001,
+          tbc2 TYPE TABLEVIEW USING SCREEN 2002.
+
+" Radio Button Variables
+DATA: rb1 TYPE c, " Employee Save
+      rb2 TYPE c, " Employee View
+      rb3 TYPE c, " Student Save
+      rb4 TYPE c. " Student View
+
+************************************************************************
+* Internal Tables & Work Areas
+************************************************************************
+
+" Employee Structure
+TYPES: BEGIN OF ty_zemployee,
+         mandt    TYPE zemployee-mandt,
+         emp_id   TYPE zemployee-emp_id,
+         emp_name TYPE zemployee-emp_name,
+         emp_desg TYPE zemployee-emp_desg,
+         emp_sal  TYPE zemployee-emp_sal,
+       END OF ty_zemployee.
+
+DATA: it_zemployee TYPE TABLE OF ty_zemployee,
+      wa_zemployee TYPE ty_zemployee.
+
+" Student Structure
+TYPES: BEGIN OF ty_zstudent,
+         mandt     TYPE zstudent-mandt,
+         stud_id   TYPE zstudent-stud_id,
+         stud_name TYPE zstudent-stud_name,
+         stud_no   TYPE zstudent-stud_no,
+         stud_div  TYPE zstudent-stud_div,
+       END OF ty_zstudent.
+
+DATA: it_zstudent TYPE TABLE OF ty_zstudent,
+      wa_zstudent TYPE ty_zstudent.
+
+" Include PBO & PAI
+INCLUDE z_pbo1.
+INCLUDE z_pai1.
+
+************************************************************************
+* PROCESS BEFORE OUTPUT
+************************************************************************
+MODULE status_2000 OUTPUT.
+  SET TITLEBAR 'ZINFO'.
+ENDMODULE.
+
+MODULE status_2001 OUTPUT.
+  SET PF-STATUS 'ZPF1'.
+ENDMODULE.
+
+MODULE status_2002 OUTPUT.
+  SET PF-STATUS 'ZPF2'.
+ENDMODULE.
+
+************************************************************************
+* PROCESS AFTER INPUT
+************************************************************************
+MODULE user_command_2000 INPUT.
+ENDMODULE.
+
+" Screen 2001 - Employee Display
+MODULE user_command_2001 INPUT.
+  CASE sy-ucomm.
+    WHEN 'BACK'.    LEAVE TO SCREEN 2000.
+    WHEN 'EXIT'.    LEAVE TO SCREEN 0.
+    WHEN 'CANCEL'.  LEAVE TO SCREEN 0.
+  ENDCASE.
+ENDMODULE.
+
+" Screen 2003 - Student Save/View
+MODULE user_command_2003 INPUT.
+  CASE sy-ucomm.
+    WHEN 'SAVE2'.
+      IF rb3 = 'X'.
+        INSERT INTO zstudent VALUES wa_zstudent.
+        IF sy-subrc = 0.
+          MESSAGE 'Student Data Inserted Successfully' TYPE 'S'.
+        ELSE.
+          MESSAGE 'Insert Failed' TYPE 'E'.
+        ENDIF.
+      ENDIF.
+
+    WHEN 'VIEW2'.
+      IF rb4 = 'X'.
+        SELECT mandt stud_id stud_name stud_no stud_div
+          INTO TABLE it_zstudent
+          FROM zstudent
+          WHERE stud_id = wa_zstudent-stud_id.
+        CALL SCREEN 2002.
+      ENDIF.
+
+    WHEN 'ALL2'.
+      SELECT mandt stud_id stud_name stud_no stud_div
+        INTO TABLE it_zstudent
+        FROM zstudent.
+      CALL SCREEN 2002.
+  ENDCASE.
+ENDMODULE.
+
+" Screen 2002 - Student Display
+MODULE user_command_2002 INPUT.
+  CASE sy-ucomm.
+    WHEN 'BACK'.    LEAVE TO SCREEN 2000.
+    WHEN 'EXIT'.    LEAVE TO SCREEN 0.
+    WHEN 'CANCEL'.  LEAVE TO SCREEN 0.
+  ENDCASE.
+ENDMODULE.
+
+" Screen 2004 - Employee Save/View
+MODULE user_command_2004 INPUT.
+  CASE sy-ucomm.
+    WHEN 'SAVE'.
+      IF rb1 = 'X'.
+        INSERT INTO zemployee VALUES wa_zemployee.
+        IF sy-subrc = 0.
+          MESSAGE 'Employee Data Inserted Successfully' TYPE 'S'.
+        ELSE.
+          MESSAGE 'Insert Failed' TYPE 'E'.
+        ENDIF.
+      ENDIF.
+
+    WHEN 'VIEW'.
+      IF rb2 = 'X'.
+        SELECT mandt emp_id emp_name emp_desg emp_sal
+          INTO TABLE it_zemployee
+          FROM zemployee
+          WHERE emp_id = wa_zemployee-emp_id.
+        CALL SCREEN 2001.
+        CLEAR wa_zemployee.
+      ENDIF.
+
+    WHEN 'ALL'.
+      SELECT * FROM zemployee INTO TABLE it_zemployee.
+      IF sy-subrc = 0.
+        CALL SCREEN 2001.
+      ENDIF.
+  ENDCASE.
+ENDMODULE.

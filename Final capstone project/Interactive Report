@@ -1,0 +1,47 @@
+************************************************************************
+* Project   : Employee Designation Drilldown Report
+* Developer : Aniket Shegamwar
+* Purpose   : Classical ABAP Report with Interactive Drilldown
+************************************************************************
+
+REPORT zemployee_drilldown.
+
+************************************************************************
+* START-OF-SELECTION
+* First output: list of distinct employee designations
+************************************************************************
+START-OF-SELECTION.
+
+  " Fetch distinct designations
+  SELECT DISTINCT emp_desg
+    FROM zemployee
+    INTO TABLE @DATA(it_final).
+
+  " Display list of designations
+  LOOP AT it_final INTO DATA(wa_emp).
+    WRITE: / wa_emp-emp_desg.
+    " Hide field value to use in AT LINE-SELECTION
+    HIDE wa_emp-emp_desg.
+  ENDLOOP.
+
+************************************************************************
+* AT LINE-SELECTION
+* Drilldown: when user clicks on a designation, show employees
+************************************************************************
+AT LINE-SELECTION.
+
+  " Get the clicked designation
+  DATA(lv_desg) = wa_emp-emp_desg.
+
+  " Fetch all employees with that designation
+  SELECT *
+    FROM zemployee
+    INTO TABLE @DATA(it_final2)
+    WHERE emp_desg = @lv_desg.
+
+  " Display employee details
+  LOOP AT it_final2 INTO DATA(wa_emp2).
+    WRITE: / wa_emp2-emp_id,
+             wa_emp2-emp_name,
+             wa_emp2-emp_sal.
+  ENDLOOP.

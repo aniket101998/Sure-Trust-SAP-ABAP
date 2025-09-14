@@ -1,0 +1,75 @@
+************************************************************************
+* Project   : Student Smart Form Print
+* Developer : Aniket Shegamwar
+* Purpose   : Fetch student data from ZSTUDENT and print via Smart Form
+************************************************************************
+
+REPORT zstudent_smartform.
+
+************************************************************************
+* TYPES & DATA
+************************************************************************
+TYPES: BEGIN OF ty_student,
+         stud_id   TYPE zstudent-stud_id,
+         stud_name TYPE zstudent-stud_name,
+         stud_no   TYPE zstudent-stud_no,
+         stud_div  TYPE zstudent-stud_div,
+       END OF ty_student.
+
+DATA: wa_stud TYPE ty_student,          " Work area for single student
+      it_stud TYPE TABLE OF ty_student. " Table for Smart Form
+
+TABLES: zstudent.
+
+************************************************************************
+* PARAMETERS
+************************************************************************
+PARAMETERS: p_id TYPE zstudent-stud_id OBLIGATORY.
+
+************************************************************************
+* START-OF-SELECTION
+************************************************************************
+START-OF-SELECTION.
+
+  " Fetch student details for given ID
+  SELECT SINGLE stud_id
+                stud_name
+                stud_no
+                stud_div
+    INTO wa_stud
+    FROM zstudent
+    WHERE stud_id = p_id.
+
+  " Append into internal table for Smart Form
+  APPEND wa_stud TO it_stud.
+
+  " Call generated Smart Form function module
+  CALL FUNCTION '/1BCDWB/SF00000001'    " Replace with your Smart Form FM
+    EXPORTING
+*     ARCHIVE_INDEX              =
+*     ARCHIVE_INDEX_TAB          =
+*     ARCHIVE_PARAMETERS         =
+*     CONTROL_PARAMETERS         =
+*     MAIL_APPL_OBJ              =
+*     MAIL_RECIPIENT             =
+*     MAIL_SENDER                =
+*     OUTPUT_OPTIONS             =
+      wa_stud1                   = wa_stud   " Single student structure
+*   IMPORTING
+*     DOCUMENT_OUTPUT_INFO       =
+*     JOB_OUTPUT_INFO            =
+*     JOB_OUTPUT_OPTIONS         =
+    TABLES
+      it_stud                    = it_stud   " Student table
+    EXCEPTIONS
+      FORMATTING_ERROR           = 1
+      INTERNAL_ERROR             = 2
+      SEND_ERROR                 = 3
+      USER_CANCELED              = 4
+      OTHERS                     = 5.
+
+  IF sy-subrc <> 0.
+    MESSAGE 'Error occurred while calling Smart Form' TYPE 'E'.
+  ELSE.
+    MESSAGE 'Smart Form executed successfully' TYPE 'S'.
+  ENDIF.

@@ -1,0 +1,64 @@
+************************************************************************
+* Project   : Employee Smart Form Print
+* Developer : Aniket Shegamwar
+* Purpose   : Fetch employee data from ZEMPLOYEE and print via Smart Form
+************************************************************************
+
+REPORT zemployee_smartform.
+
+************************************************************************
+* TYPES & DATA
+************************************************************************
+TABLES: zemployee.
+
+TYPES: BEGIN OF ty_employee,
+         emp_id   TYPE zemployee-emp_id,
+         emp_name TYPE zemployee-emp_name,
+         emp_desg TYPE zemployee-emp_desg,
+         emp_sal  TYPE zemployee-emp_sal,
+       END OF ty_employee.
+
+DATA: wa_emp TYPE ty_employee,          " Work area for single employee
+      it_emp TYPE TABLE OF ty_employee. " Table for Smart Form
+
+************************************************************************
+* PARAMETERS
+************************************************************************
+PARAMETERS: p_id TYPE zemployee-emp_id OBLIGATORY.
+
+************************************************************************
+* START-OF-SELECTION
+************************************************************************
+START-OF-SELECTION.
+
+  " Fetch employee details for given ID
+  SELECT SINGLE emp_id
+                emp_name
+                emp_desg
+                emp_sal
+    INTO wa_emp
+    FROM zemployee
+    WHERE emp_id = p_id.
+
+  " Append into internal table for Smart Form
+  APPEND wa_emp TO it_emp.
+
+  " Call generated Smart Form function module
+  CALL FUNCTION '/1BCDWB/SF00000002'    " Replace with your Smart Form FM
+    EXPORTING
+      wa_emp   = wa_emp   " Single employee structure
+    TABLES
+      it_emp   = it_emp   " Employee table
+    EXCEPTIONS
+      formatting_error = 1
+      internal_error   = 2
+      send_error       = 3
+      user_canceled    = 4
+      OTHERS           = 5.
+
+  " Handle errors
+  IF sy-subrc <> 0.
+    MESSAGE 'Error occurred while calling Smart Form' TYPE 'E'.
+  ELSE.
+    MESSAGE 'Employee Smart Form executed successfully' TYPE 'S'.
+  ENDIF.

@@ -1,0 +1,89 @@
+************************************************************************
+* Project   : Student Data Export Report
+* Developer : Aniket Shegamwar
+* Purpose   : Export ZSTUDENT table data into XML/Excel file
+************************************************************************
+
+REPORT zstudent_export.
+
+************************************************************************
+* PARAMETERS
+************************************************************************
+" File name for export
+PARAMETERS: p_fname TYPE rlgrap-filename OBLIGATORY.
+
+" F4 Help for file selection
+AT SELECTION-SCREEN ON VALUE-REQUEST FOR p_fname.
+  CALL FUNCTION 'F4_FILENAME'
+    IMPORTING
+      file_name = p_fname.
+
+************************************************************************
+* START-OF-SELECTION
+************************************************************************
+START-OF-SELECTION.
+
+  DATA: lt_bintab   TYPE STANDARD TABLE OF solix, " Binary table for file
+        lv_size     TYPE i,                        " File size
+        lv_filename TYPE string.                   " File name
+
+  " Fetch data from ZSTUDENT (limit 100 rows for demo)
+  SELECT * FROM zstudent
+    INTO TABLE @DATA(lt_student)
+    UP TO 100 ROWS.
+
+  IF sy-subrc EQ 0.
+
+    " Create SALV object for table
+    cl_salv_table=>factory(
+      IMPORTING
+        r_salv_table = DATA(lo_alv)
+      CHANGING
+        t_table      = lt_student ).
+
+    " Convert SALV output to XML (Excel format, type 02)
+    DATA(lv_xml) = lo_alv->to_xml( xml_type = '02' ).
+
+    " Convert XSTRING to binary internal table
+    CALL FUNCTION 'SCMS_XSTRING_TO_BINARY'
+      EXPORTING
+        buffer        = lv_xml
+      IMPORTING
+        output_length = lv_size
+      TABLES
+        binary_tab    = lt_bintab.
+
+    lv_filename = p_fname.
+
+    " Download binary file to frontend
+    CALL FUNCTION 'GUI_DOWNLOAD'
+      EXPORTING
+        bin_filesize = lv_size
+        filename     = lv_filename
+        filetype     = 'BIN'
+      TABLES
+        data_tab     = lt_bintab
+      EXCEPTIONS
+        OTHERS       = 1.
+
+    " Check download result
+    IF sy-subrc <> 0.
+      MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+        WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+    ELSE.
+      MESSAGE 'ZSTUDENT data downloaded successfully!' TYPE 'S'.
+    ENDIF.
+
+  ELSE.
+    MESSAGE 'No data found in ZSTUDENT' TYPE 'I'.
+  ENDIF.
+
+************************************************************************
+* Display output on screen as well
+************************************************************************
+  LOOP AT lt_student INTO DATA(ls_row).
+    WRITE: / ls_row-stud_id,
+             ls_row-stud_name,
+             ls_row-stud_no,
+             ls_row-stud_div.
+  ENDLOOP.
